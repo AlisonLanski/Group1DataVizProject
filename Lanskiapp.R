@@ -129,7 +129,7 @@ ui <- fluidPage(
     )
 )
 
-pal <- colorFactor(c("cyan2", 
+pal_al <- colorFactor(c("cyan2", 
                      "coral2", 
                      "green2", 
                      "darkgreen", 
@@ -163,14 +163,14 @@ server <- function(input, output) {
                   popup = paste("District ", districts@data$Num)) %>% 
       addCircleMarkers(data = parks_subset(),
                        radius = 8,
-                       color = ~pal(parks_subset()@data$Park_Type),
+                       color = ~pal_al(parks_subset()@data$Park_Type),
                        stroke = FALSE, 
                        fillOpacity = 0.7, 
                        popup = paste(parks_subset()@data$Park_Name, "<br>",
                                      parks_subset()@data$Address, "<br>", 
                                      parks_subset()@data$NAMELSAD)) %>%
      addLegend('bottomleft', 
-                pal = pal, 
+                pal = pal_al, 
                 values = parks_census_dist@data$Park_Type, #show the whole range
                 title = 'Parks by Type: \nSouth Bend',
                 opacity = 0.7) %>%
