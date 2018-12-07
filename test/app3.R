@@ -43,12 +43,35 @@ district_pal <- colorFactor(palette = c("red", "orange", "yellow", "green",
                             domain = c("1", "2", "3", "4", "5", "6")
 )
 
-facility_pal <- colorFactor(palette = c("firebrick", "salmon3", "navy"), 
-                            domain = c("FIRE STATION", "LIBRARY", 
-                                       "POLICE STATION"))
-
 ov <- over(facilities, districts)
 facilities@data$district <- ov$Num
+facilities@data$in_district <- "Yes"
+
+districts.center <- SpatialPointsDataFrame(gCentroid(districts, byid = TRUE), 
+                                           districts@data, match.ID = FALSE)
+
+for (i in 1:nrow(facilities@data)) {
+  if(is.na(facilities@data[i, ]$district)) {
+    distances <- distHaversine(facilities@coords[i, ], districts.center)
+    nearest <- which.min(distances)
+    facilities@data[i, ]$district <- nearest
+    facilities@data[i, ]$in_district <- "No"
+  }
+}
+
+facilities@data$marker <- paste(facilities@data$POPL_TYPE, 
+                                facilities@data$in_district, 
+                                sep = " - ")
+
+facility_pal <- colorFactor(palette = c("tomato", "firebrick", "salmon", 
+                                        "salmon3", "royalblue", "navy"), 
+                            domain = c("FIRE STATION - No", 
+                                       "FIRE STATION - Yes", 
+                                       "LIBRARY - No", 
+                                       "LIBRARY - Yes", 
+                                       "POLICE STATION - No", 
+                                       "POLICE STATION - Yes"))
+
 #KEN
 
 #ALISON
@@ -165,7 +188,8 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                            # Show a plot of the generated distribution
                            mainPanel(
                               leafletOutput("facilityMap"), 
-                              plotOutput("barPlot")
+                              plotOutput("barPlot"), 
+                              h4(textOutput("inCityExplain"))
                            )
                          )
                 ),
@@ -245,33 +269,57 @@ server <- function(input, output) {
                        radius = 5, 
                        opacity = 1, 
                        fillOpacity = 1, 
-                       color = ~facility_pal(selected_facility()@data$POPL_TYPE), 
+                       color = ~facility_pal(selected_facility()@data$marker), 
                        popup = paste("<b>", selected_facility()@data$POPL_NAME, 
                                      "</b><br>", str_extract(selected_facility()@data$POPL_ADDR1, "[0-9A-z[:blank:]\\.,]*"), 
                                      "<br>", selected_facility()@data$POPL_CITY, 
                                      ", IN ", selected_facility()@data$POPL_ZIP, 
+                                     "<br>District: ", 
+                                     ifelse(selected_facility()@data$in_district == "Yes", 
+                                            selected_facility()@data$district, 
+                                            paste("Nearest to ", 
+                                                  selected_facility()@data$district, 
+                                                  sep = "")), 
                                      sep = ""))
   })
   
   output$barPlot <- renderPlot({
-    ggplot(selected_facility()@data %>% 
-             count(district) %>% 
-             complete(district = c("1", "2", "3", "4", "5", "6", NA), fill = list(n = 0)), 
-           aes(x = district, y = n)
+    plot_data <- selected_facility()@data %>% 
+      count(district, in_district) %>% 
+      complete(district = c("1", "2", "3", "4", "5", "6"), 
+               in_district = c("Yes", "No"), 
+               fill = list(n = 0))
+    
+    plot_colors <- c()
+    
+    if (input$facility_type == "FIRE STATION") {
+      plot_colors <- c("tomato", "firebrick")
+    } else if (input$facility_type == "LIBRARY") {
+      plot_colors <- c("salmon", "salmon3")
+    } else {
+      plot_colors <- c("royalblue", "navy")
+    }
+    
+    ggplot(plot_data, 
+           aes(x = district, y = n, fill = in_district)
     ) + 
-      geom_col(fill = ifelse(input$facility_type == "FIRE STATION", 
-                             "firebrick", 
-                             ifelse(input$facility_type == "LIBRARY", 
-                                    "salmon3", 
-                                    "navy"))) + 
+      geom_col(position = "stack") + 
       labs(x = "District", y = ifelse(input$facility_type == "FIRE STATION", 
                                       "Number of fire stations", 
                                       ifelse(input$facility_type == "LIBRARY", 
                                              "Number of libraries", 
-                                             "Number of police stations"))) + 
+                                             "Number of police stations")), 
+           fill = "In city?") + 
       theme_classic() + 
-      theme(text = element_text(size = 16))
+      theme(text = element_text(size = 16), 
+            legend.position = "bottom") + 
+      scale_fill_manual(values = c(plot_colors))
   })
+  
+  output$inCityExplain <- renderText({
+    "Facilities outside the city are associated with the nearest district."
+  })
+
 #KEN
   
 #ALISON
@@ -284,25 +332,25 @@ server <- function(input, output) {
     leaflet(parks_subset())  %>%
       addTiles()  %>%
       addPolygons(data = districts,
-                  popup = paste("District ", districts@data$Num)) %>% 
+                  popup = paste("District ", districts@data$Num)) %>%
       addCircleMarkers(data = parks_subset(),
                        radius = 8,
                        color = ~pal(parks_subset()@data$Park_Type),
-                       stroke = FALSE, 
-                       fillOpacity = 0.7, 
+                       stroke = FALSE,
+                       fillOpacity = 0.7,
                        popup = paste(parks_subset()@data$Park_Name, "<br>",
-                                     parks_subset()@data$Address, "<br>", 
+                                     parks_subset()@data$Address, "<br>",
                                      parks_subset()@data$NAMELSAD)) %>%
-      addLegend('bottomleft', 
-                pal = pal, 
+      addLegend('bottomleft',
+                pal = pal,
                 values = parks_census_dist@data$Park_Type, #show the whole range
                 title = 'Parks by Type: \nSouth Bend',
                 opacity = 0.7) %>%
       setView(-86.2520, 41.6764, zoom = 11)
-    
-    
-    #      addPolygons(fillColor = ~pal2(elections@data$SUB_REGION), 
-    #                color = ~pal3(elections@data[,input$elect]), 
+
+
+    #      addPolygons(fillColor = ~pal2(elections@data$SUB_REGION),
+    #                color = ~pal3(elections@data[,input$elect]),
     #                weight = 2)
   })
   
@@ -381,8 +429,8 @@ server <- function(input, output) {
       addCircleMarkers(data = schools.center, popup = ~School, radius = 5, opacity = 1, fillOpacity = 1)
   })
 #RUSS
-
 }
+
 
 # Run the application 
 shinyApp(ui = ui, server = server)
