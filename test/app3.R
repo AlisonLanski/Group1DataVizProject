@@ -17,6 +17,7 @@ library(stringr)
 library(geosphere) # Ken
 library(scales)    # Ken
 library(DT)        # Marisa
+library(scales) # Russ for pretty_breaks() in ggplot
 
 options(scipen = 99)
 
@@ -162,12 +163,32 @@ prop$popup = paste("<b>",prop$Property_S,"</b><br>",
 #MARISA
 
 #RUSS
+# Old Code
+# schools <-  readOGR(dsn="School_Boundaries",
+#                     "School_Boundaries",
+#                     stringsAsFactors = FALSE)
+# 
+# schools.center <- SpatialPointsDataFrame(gCentroid(schools, byid=TRUE), 
+#                                          schools@data, match.ID=FALSE)
+school_pal <- colorFactor(palette = c("firebrick", "salmon3"), 
+                          domain = c("Public", "Private"))
+
+# Read in Schools data
 schools <-  readOGR(dsn="School_Boundaries",
                     "School_Boundaries",
                     stringsAsFactors = FALSE)
 
-schools.center <- SpatialPointsDataFrame(gCentroid(schools, byid=TRUE), 
+# Get School points
+schools.center <- SpatialPointsDataFrame(gCentroid(schools,
+                                                   byid=TRUE),
                                          schools@data, match.ID=FALSE)
+# combine school and district info
+ov_schools <- over(schools.center, districts)
+ov_schools2 <- spCbind(schools.center, ov_schools)
+
+# add district column and info to Schools data
+schools.center@data$district <- ov_schools2$Num
+
 #RUSS
 
 # Define UI for application that draws a histogram
@@ -406,29 +427,48 @@ server <- function(input, output) {
 #MARISA
   
 #RUSS
-  output$sub.school.list <- renderUI({
-    print(input$school.type)
-    
-    if(input$school.type == "All"){
-      school.list <- schools@data[,1]
-    }else{
-      school.list <- schools@data[schools@data$SchoolType == input$school.type,1]
-    }
-    # checkboxGroupInput(
-    #   inputId = "School",
-    #   label = "School",
-    #   choices = school.list)
+  selected_schooltype <- reactive({
+    schools.center[schools.center@data$SchoolType == input$school_type,]
   })
   
-  bound.subset <- reactive({
-    schools[schools@data$School == input$School,]
+  output$schoolMap <- renderLeaflet({
+    leaflet() %>%
+      addTiles() %>%
+      # addPolygons(data = districts,
+      #             popup = paste("<b>District ", districts@data$Num, "</b><br>",
+      #                           "Council Member: ", districts@data$Council_Me),
+      #             color = ~district_pal(districts@data$Num)) %>%
+      addPolygons(data = districts,
+                  popup = paste("<b>District ", districts@data$Num, "</b><br>", 
+                                "Council Member: ", districts@data$Council_Me),
+                  fillColor = ~pal_districts(districts@data$Num), #polygon fill
+                  color = "black", #stroke color
+                  stroke = 1,  #stroke width
+                  fillOpacity = .6) %>% 
+      
+      addCircleMarkers(data = selected_schooltype(),
+                       radius = 5,
+                       opacity = 1,
+                       fillOpacity = 1,
+                       color = ~school_pal(selected_schooltype()@data$SchoolType),
+                       popup = paste("<b>", selected_schooltype()@data$School,
+                                     "</b><br>",
+                                     sep = "")
+      )
   })
   
-  output$map <-  renderLeaflet({
-    leaflet(bound.subset())%>%
-      addProviderTiles(providers$OpenStreetMap) %>%
-      addPolygons(data = districts)%>%
-      addCircleMarkers(data = schools.center, popup = ~School, radius = 5, opacity = 1, fillOpacity = 1)
+  output$barPlotschool <- renderPlot({
+    ggplot(selected_schooltype()@data %>% 
+             count(district) %>% 
+             complete(district = c("1", "2", "3", "4", "5", "6", NA), fill = list(n = 0)), aes(x = district, y = n) ) + 
+      geom_col(fill = ifelse(input$school_type == "Private",
+                             "firebrick", "salmon3")) +
+      labs(x = "District", y = ifelse(input$school_type == "Private",
+                                      "Number of Private Schools", "Number of Public Schools")) + 
+      theme_classic() + 
+      theme(text = element_text(size = 16)) +
+      scale_y_continuous(breaks=pretty_breaks()) # need to add library(scales) for pretty_breaks
+    # scale_y_continuous(breaks=c(1:10))
   })
 #RUSS
 }
