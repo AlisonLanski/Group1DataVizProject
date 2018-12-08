@@ -88,7 +88,6 @@ parks_redo <- spTransform(parks_spatial, common_crs)
 CRS(proj4string(parks_redo))
 
 #get the census data for the park points
-library(maptools)
 parks_census_df <- over(parks_redo, census_redo)
 
 #recombine with parks info
@@ -147,9 +146,17 @@ parks_districts_df <- over(parks_census, districts)
 #recombine with parks info
 parks_census_dist <- spCbind(parks_census, parks_districts_df)
 
+#add a nice looking districts column for later
+parks_census_dist@data <- parks_census_dist@data %>%
+  mutate(District = Num) %>% select(Park_Name, Park_Type, District, everything())
+
 pal_districts <- colorFactor(palette = c("#999999", "#4d4d4d", "#808080", "#bfbfbf", 
                                          "#666666", "#b3b3b3"), 
                              domain = c("1", "2" ,"3", "4", "5", "6"))
+
+pal_districts_TF <- colorFactor(palette = c("magenta", "mediumblue"),
+                                domain = c("TRUE", "FALSE"))
+
 
 #ALISON
 
@@ -216,18 +223,23 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                 tabPanel("Alison",
                          sidebarLayout(
                            sidebarPanel(
+                             selectInput(inputId = "districtnum",
+                                         label = "Choose a district?",
+                                         choices = sort(unique(parks_census_dist@data$Num)),
+                                         selected = "1"),
                              selectInput(inputId = "amenity",
                                          label = "Choose a park amenity",
                                          choices = names(parks_census_dist@data[4:47]),
-                                         selected = 'Open_Turf'),
-                             selectInput(inputId = "districtnum",
-                                         label = "Which district?",
-                                         choices = sort(unique(parks_census_dist@data$Num)),
-                                         selected = "1")
-                           ),
+                                         selected = 'Open_Turf')
+                             ),
                            
-                           # Show a plot of the generated distribution
-                           mainPanel(leafletOutput("ParkMap"), plotOutput("DistPlot"), DT::dataTableOutput("CensusTable"))
+                          
+                           mainPanel(h4(textOutput("ParkMapTitle")),
+                                     leafletOutput("ParkMap"),
+                                     h4(textOutput("PopDensPlotTitle")),
+                                     plotOutput("PopDensPlot"),
+                                     h4(textOutput("CensusTableTitle")),
+                                     DT::dataTableOutput("CensusTable"))
                          )
                 ),
                 
@@ -346,6 +358,10 @@ server <- function(input, output) {
   
 #ALISON
   
+  output$ParkMapTitle <- renderText({
+    "Parks with the selected amenity"
+  })
+  
   parks_subset <- reactive({
     parks_census_dist[!is.na(parks_census_dist@data[,input$amenity]),]
   })
@@ -354,51 +370,72 @@ server <- function(input, output) {
     leaflet(parks_subset())  %>%
       addTiles()  %>%
       addPolygons(data = districts,
-                  popup = paste("District ", districts@data$Num)) %>%
+                  popup = paste("<b>District ", districts@data$Num, "</b><br>", 
+                                "Council Member: ", districts@data$Council_Me),
+                  fillColor = ~pal_districts(districts@data$Num), #polygon fill
+                  color = "black", #stroke color
+                  stroke = 1,  #stroke width
+                  fillOpacity = .6) %>% 
       addCircleMarkers(data = parks_subset(),
                        radius = 8,
-                       color = ~pal(parks_subset()@data$Park_Type),
-                       stroke = FALSE,
-                       fillOpacity = 0.7,
-                       popup = paste(parks_subset()@data$Park_Name, "<br>",
-                                     parks_subset()@data$Address, "<br>",
-                                     parks_subset()@data$NAMELSAD)) %>%
-      addLegend('bottomleft',
-                pal = pal,
-                values = parks_census_dist@data$Park_Type, #show the whole range
-                title = 'Parks by Type: \nSouth Bend',
+                       color = ~pal_districts_TF(as.character(input$districtnum != parks_subset()@data$Num | 
+                                                                is.na(parks_subset()@data$Num))),
+                       #color = ~pal(parks_subset()@data$Park_Type),
+                       stroke = FALSE, 
+                       fillOpacity = 0.7, 
+                       popup = paste("<b>",parks_subset()@data$Park_Name, "</b><br>", 
+                                     parks_subset()@data$Address, "<br>", 
+                                     parks_subset()@data$NAMELSAD, "<br>", 
+                                     "<em>",parks_subset()@data$Park_Type, "</em><br>",
+                                     "Area population density: ", 
+                                     parks_subset()@data$Population_Density_per_sq_mile)) %>%
+      addLegend('bottomleft', 
+                colors = c("magenta", "mediumblue"),
+                labels = c("In District", "Out of District"), #show the whole range
+                title = 'South Bend Park Location',
                 opacity = 0.7) %>%
       setView(-86.2520, 41.6764, zoom = 11)
-
-
-    #      addPolygons(fillColor = ~pal2(elections@data$SUB_REGION),
-    #                color = ~pal3(elections@data[,input$elect]),
-    #                weight = 2)
   })
   
-  output$DistPlot <- renderPlot({
-    # Render a barplot
+  output$PopDensPlotTitle <- renderText({
+    "Population density near those parks"
+  })
+  
+  output$PopDensPlot <- renderPlot({
+    # Set up the plot
     ggplot(
       data = parks_subset()@data,
-      #      data = parks_census_dist@data, #works
       aes(x = Park_Type, y = Population_Density_per_sq_mile, 
-          color = (input$districtnum != Num), size = 2)
+          #color by in/out of district
+          color = as.character(input$districtnum != Num | is.na(Num)), size = 2) 
     ) + geom_point() + 
-      guides(size = FALSE) + 
+      guides(size = FALSE, color = FALSE) +
+      #color = guide_legend(override.aes = list(size = 5, shape = 15))) + #don't show the size legend
       theme_minimal() + 
-      scale_color_manual("District", values = c("lightblue", "black", "gray"), 
-                         labels = c("In District", "Out of District", "Out of City"))
-    
-    #) + geom_histogram(stat = "count")
-    # plot(x = parks_census_dist@data$Lat, 
-    #      y = parks_census_dist@data$SE_T002_02, 
-    #         main=input$amenity,
-    #         ylab="Number of Telephones",
-    #         xlab="Year")
+      theme(text = element_text(size = 15),
+            legend.title = element_text(size = 15),
+            legend.text = element_text(size = 14)) +
+      scale_color_manual("District", values = c("TRUE" = "mediumblue", "FALSE" = "magenta"), 
+                         labels = c("FALSE" = "In District", "TRUE" = "Out of District")) +
+      xlab("\nPark Type") +
+      ylab("Population density per sq. mile \n")
   })
   
+  
+  output$CensusTableTitle <- renderText({
+    "Demographics and population near those parks"
+  })
+  
+  
   output$CensusTable <- DT::renderDataTable({
-    DT::datatable(parks_subset()@data[, c(1,2,56, 62, 86:91)], fillContainer = TRUE)})
+    DT::datatable(parks_subset()@data[, c(1:3, 57, 63, 87:93)], 
+                  
+                  options = list(pageLength = 5, scrollX = T)) %>%
+      formatStyle(
+        'District',
+        target = 'row',
+        backgroundColor = styleEqual(input$districtnum, '#ffe6ff'))
+  })
 #ALISON
   
 #MARISA
