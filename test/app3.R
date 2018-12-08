@@ -250,21 +250,20 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                 
                 tabPanel("Russ",
                          sidebarLayout(
-                           
-                           # Sidebar with a slider input
                            sidebarPanel(
-                             radioButtons(inputId = "school.type", label= "School Type",choices = c(unique(schools@data$SchoolType),"All"), selected = "All"),
-                             uiOutput(outputId="sub.school.list")
+                             radioButtons(inputId = "school_type", 
+                                          label = h3("Type of School"), 
+                                          choices = list("Public" = "Public", 
+                                                         "Private" = "Private")
+                             )
                            ),
-                           
                            
                            # Show a plot of the generated distribution
                            mainPanel(
-                             tabsetPanel(type = "tabs", 
-                                         tabPanel("Map", leafletOutput("map"))
-                             )
+                             leafletOutput("schoolMap"), 
+                             plotOutput("barPlotschool")
                            )
-                         )
+                         ) 
                 )
    
 
