@@ -15,6 +15,7 @@ library(rgeos)
 library(maptools)
 library(stringr)
 library(geosphere) # Ken
+library(scales)    # Ken
 library(DT)        # Marisa
 
 options(scipen = 99)
@@ -313,7 +314,8 @@ server <- function(input, output) {
       theme_classic() + 
       theme(text = element_text(size = 16), 
             legend.position = "bottom") + 
-      scale_fill_manual(values = c(plot_colors))
+      scale_fill_manual(values = c(plot_colors)) + 
+      scale_y_continuous(breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1)))))
   })
   
   output$inCityExplain <- renderText({
