@@ -229,7 +229,7 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                                          selected = "1"),
                              selectInput(inputId = "amenity",
                                          label = "Choose a park amenity",
-                                         choices = names(parks_census_dist@data[4:47]),
+                                         choices = names(parks_census_dist@data[5:48]),
                                          selected = 'Open_Turf')
                              ),
                            
