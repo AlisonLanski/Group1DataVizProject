@@ -36,13 +36,6 @@ common_crs <- CRS(proj4string(districts))
 
 #apply coding to parks
 facilities <- spTransform(public_facilities_spatial, common_crs)
-CRS(proj4string(facilities))
-
-
-district_pal <- colorFactor(palette = c("red", "orange", "yellow", "green", 
-                                        "blue", "violet"), 
-                            domain = c("1", "2", "3", "4", "5", "6")
-)
 
 ov <- over(facilities, districts)
 facilities@data$district <- ov$Num
@@ -153,6 +146,10 @@ parks_districts_df <- over(parks_census, districts)
 #recombine with parks info
 parks_census_dist <- spCbind(parks_census, parks_districts_df)
 
+pal_districts <- colorFactor(palette = c("#999999", "#4d4d4d", "#808080", "#bfbfbf", 
+                                         "#666666", "#b3b3b3"), 
+                             domain = c("1", "2" ,"3", "4", "5", "6"))
+
 #ALISON
 
 #MARISA
@@ -262,10 +259,13 @@ server <- function(input, output) {
   output$facilityMap <- renderLeaflet({
     leaflet() %>% 
       addTiles() %>% 
-      addPolygons(data = districts, 
+      addPolygons(data = districts,
                   popup = paste("<b>District ", districts@data$Num, "</b><br>", 
-                                "Council Member: ", districts@data$Council_Me), 
-                  color = ~district_pal(districts@data$Num)) %>% 
+                                "Council Member: ", districts@data$Council_Me),
+                  fillColor = ~pal_districts(districts@data$Num), #polygon fill
+                  color = "black", #stroke color
+                  stroke = 1,  #stroke width
+                  fillOpacity = .6) %>% 
       addCircleMarkers(data = selected_facility(), 
                        radius = 5, 
                        opacity = 1, 
