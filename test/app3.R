@@ -204,8 +204,8 @@ schools.center@data$district <- ov_schools2$Num
 #RUSS
 
 # Define UI for application that draws a histogram
-ui <- navbarPage(title = "East Group 1 Final Project -TEST",
-                tabPanel("Ken",
+ui <- navbarPage(title = "District Dashboard",
+                tabPanel("Public Facilities",
                          sidebarLayout(
                            sidebarPanel(
                              radioButtons(inputId = "facility_type", 
@@ -225,7 +225,7 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                          )
                 ),
                 
-                tabPanel("Alison",
+                tabPanel("Parks",
                          sidebarLayout(
                            sidebarPanel(
                              selectInput(inputId = "districtnum",
@@ -265,7 +265,7 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                          )
                 ),
                 
-                tabPanel("Russ",
+                tabPanel("Schools",
                          sidebarLayout(
                            sidebarPanel(
                              radioButtons(inputId = "school_type", 
@@ -505,7 +505,7 @@ server <- function(input, output) {
   output$barPlotschool <- renderPlot({
     ggplot(selected_schooltype()@data %>% 
              count(district) %>% 
-             complete(district = c("1", "2", "3", "4", "5", "6", NA), fill = list(n = 0)), aes(x = district, y = n) ) + 
+             complete(district = c("1", "2", "3", "4", "5", "6"), fill = list(n = 0)), aes(x = district, y = n) ) + 
       geom_col(fill = ifelse(input$school_type == "Private",
                              "firebrick", "salmon3")) +
       labs(x = "District", y = ifelse(input$school_type == "Private",
