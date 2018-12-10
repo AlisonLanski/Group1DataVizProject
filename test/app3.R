@@ -161,7 +161,7 @@ pal_districts_TF <- colorFactor(palette = c("magenta", "mediumblue"),
 #ALISON
 
 #MARISA
-districts$popup = paste("<b>District ",districts$Dist,"</b><br>",
+districts$popup = paste("<b>District ",districts$Num,"</b><br>",
                         "Council Member: ",districts$Council_Me,sep ="")
 
 prop = readOGR(dsn = "Abandoned_Property_Parcels", layer = "Abandoned_Property_Parcels")
