@@ -148,7 +148,7 @@ parks_census_dist <- spCbind(parks_census, parks_districts_df)
 
 #add a nice looking districts column for later
 parks_census_dist@data <- parks_census_dist@data %>%
-  mutate(District = Num) %>% select(Park_Name, Park_Type, District, everything())
+  mutate(District = Num) %>% dplyr::select(Park_Name, Park_Type, District, everything())
 
 pal_districts <- colorFactor(palette = c("#999999", "#4d4d4d", "#808080", "#bfbfbf", 
                                          "#666666", "#b3b3b3"), 
