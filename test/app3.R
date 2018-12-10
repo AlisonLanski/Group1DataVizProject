@@ -165,8 +165,13 @@ districts$popup = paste("<b>District ",districts$Dist,"</b><br>",
                         "Council Member: ",districts$Council_Me,sep ="")
 
 prop = readOGR(dsn = "Abandoned_Property_Parcels", layer = "Abandoned_Property_Parcels")
+prop$Full_Address = paste(prop$Address_Nu,prop$Street_Nam,"South Bend, IN",prop$Zip_Code,sep = " ")
 prop$popup = paste("<b>",prop$Property_S,"</b><br>",
-                   prop$Address_Nu,prop$Street_Nam,sep = " ")
+                   prop$Full_Address)
+# Rename the Outcome_St and Code_Enfor columns so they're not cut off
+prop$Status = prop$Outcome_St
+prop$Code_Enforced = prop$Code_Enfor
+
 #MARISA
 
 #RUSS
@@ -224,7 +229,7 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                          sidebarLayout(
                            sidebarPanel(
                              selectInput(inputId = "districtnum",
-                                         label = "Choose a district?",
+                                         label = "Choose a district",
                                          choices = sort(unique(parks_census_dist@data$Num)),
                                          selected = "1"),
                              selectInput(inputId = "amenity",
@@ -246,13 +251,13 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                 tabPanel("Marisa",
                          sidebarLayout(
                            sidebarPanel(
-                             checkboxGroupInput(inputId = "propertyStatus", 
-                                                label = "Choose one or more property status options",
-                                                choices = unique(prop@data$Property_S),
-                                                selected = c("Emergency Demo"))
+                             radioButtons(inputId = "propertyStatus", 
+                                          label = "Choose a property status",
+                                          choices = unique(filter(prop@data, !is.na(prop@data$Property_S))$Property_S))
                            ),
                            
-                           # Show a plot of the generated distribution
+                           # Show a plot of the abandoned properties on the district map
+                           # Show a datatable of the abandoned properties matching the filtered status
                            mainPanel(
                              leafletOutput("abandonedPropertiesPlot"),
                              fluidRow(DT::dataTableOutput("abandonedPropertiesTable"))
@@ -448,17 +453,21 @@ server <- function(input, output) {
                            selected_prop()@data, match.ID=FALSE)
   })
   
-  pal = colorFactor(palette = 'Set1', domain =districts$Dist)
-  
   output$abandonedPropertiesPlot <- renderLeaflet({
     leaflet() %>% 
       addTiles() %>% 
-      addPolygons(data = districts, popup = ~popup, color = ~pal(Dist)) %>% 
+      addPolygons(data = districts, 
+                  popup = ~popup, 
+                  fillColor = ~pal_districts(districts@data$Num), #polygon fill
+                  color = "black", #stroke color
+                  stroke = 1,  #stroke width
+                  fillOpacity = .6) %>% 
       addCircleMarkers(data = prop_center(), popup = ~popup, radius = 5, opacity = 1,fillOpacity = 1)
   })
   
   output$abandonedPropertiesTable <- DT::renderDataTable({
-    DT::datatable(prop_center()@data)
+    DT::datatable(prop_center()@data[,c("Status","Code_Enforced","Full_Address")],
+                  options = list(pageLength = 5, scrollX = T))
   })
 #MARISA
   
