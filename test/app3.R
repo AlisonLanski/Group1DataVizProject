@@ -169,8 +169,8 @@ prop$Full_Address = paste(prop$Address_Nu,prop$Street_Nam,"South Bend, IN",prop$
 prop$popup = paste("<b>",prop$Property_S,"</b><br>",
                    prop$Full_Address)
 # Rename the Outcome_St and Code_Enfor columns so they're not cut off
-prop$Status = prop$Outcome_St
-prop$Code_Enforced = prop$Code_Enfor
+prop$Outcome = prop$Outcome_St
+prop$Code_Enforcement = prop$Code_Enfor
 
 #MARISA
 
@@ -248,7 +248,7 @@ ui <- navbarPage(title = "East Group 1 Final Project -TEST",
                          )
                 ),
                 
-                tabPanel("Marisa",
+                tabPanel("Abandoned Properties",
                          sidebarLayout(
                            sidebarPanel(
                              radioButtons(inputId = "propertyStatus", 
@@ -466,7 +466,7 @@ server <- function(input, output) {
   })
   
   output$abandonedPropertiesTable <- DT::renderDataTable({
-    DT::datatable(prop_center()@data[,c("Status","Code_Enforced","Full_Address")],
+    DT::datatable(prop_center()@data[,c("Outcome","Code_Enforcement","Full_Address")],
                   options = list(pageLength = 5, scrollX = T))
   })
 #MARISA
