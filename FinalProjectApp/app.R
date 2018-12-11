@@ -413,6 +413,7 @@ server <- function(input, output) {
   output$ParkMap <- renderLeaflet({
     leaflet(parks_subset())  %>%
       addTiles()  %>%
+      #districts
       addPolygons(data = districts,
                   popup = paste("<b>District ", districts@data$Num, "</b><br>", 
                                 "Council Member: ", districts@data$Council_Me),
@@ -420,11 +421,11 @@ server <- function(input, output) {
                   color = "black", #stroke color
                   stroke = 1,  #stroke width
                   fillOpacity = .6) %>% 
+      #parks
       addCircleMarkers(data = parks_subset(),
                        radius = 8,
                        color = ~pal_districts_TF(as.character(input$districtnum != parks_subset()@data$Num | 
                                                                 is.na(parks_subset()@data$Num))),
-                       #color = ~pal(parks_subset()@data$Park_Type),
                        stroke = FALSE, 
                        fillOpacity = 0.7, 
                        popup = paste("<b>",parks_subset()@data$Park_Name, "</b><br>", 
@@ -453,8 +454,7 @@ server <- function(input, output) {
           #color by in/out of district
           color = as.character(input$districtnum != Num | is.na(Num)), size = 2) 
     ) + geom_point() + 
-      guides(size = FALSE, color = FALSE) +
-      #color = guide_legend(override.aes = list(size = 5, shape = 15))) + #don't show the size legend
+      guides(size = FALSE, color = FALSE) + #don't show the size legend
       theme_minimal() + 
       theme(text = element_text(size = 15),
             legend.title = element_text(size = 15),
@@ -472,13 +472,13 @@ server <- function(input, output) {
   
   
   output$CensusTable <- DT::renderDataTable({
-    DT::datatable(parks_subset()@data[, c(1:3, 57, 63, 87:93)], 
+    DT::datatable(parks_subset()@data[, c(1:3, 57, 63, 87:93)], #pick the right columns
                   
                   options = list(pageLength = 5, scrollX = T)) %>%
       formatStyle(
         'District',
         target = 'row',
-        backgroundColor = styleEqual(input$districtnum, '#ffe6ff'))
+        backgroundColor = styleEqual(input$districtnum, '#ffe6ff')) #highlight selected district
   })
 #ALISON end
   ###########################################
