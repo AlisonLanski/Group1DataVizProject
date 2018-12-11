@@ -47,8 +47,10 @@ facilities <- spTransform(public_facilities_spatial, common_crs)
 
 # Determine which facilities are in which districts
 ov <- over(facilities, districts)
+
 # Store the district in the facilities@data data frame
 facilities@data$district <- ov$Num
+
 # Create a variable indicating whether the facility is in a district,
 # defaulting to "Yes"
 facilities@data$in_district <- "Yes"
@@ -499,15 +501,22 @@ server <- function(input, output) {
 #ALISON end
   ###########################################
 #MARISA
+  
+  # Properties are filtered by status, so create a dataframe that is the subset
+  # of abandoned properties with a status matching the filter selection
   selected_prop = reactive({
     prop[prop$Property_S %in% input$propertyStatus,]
   })
   
+  # Derive the centroid of each property polygon since we want to display points
+  # for properties instead of polygons
   prop_center = reactive({
     SpatialPointsDataFrame(gCentroid(selected_prop(), byid=TRUE), 
                            selected_prop()@data, match.ID=FALSE)
   })
   
+  # abandonedPropertiesPlot is the plot of property markers overlaid on the 
+  # district map
   output$abandonedPropertiesPlot <- renderLeaflet({
     leaflet() %>% 
       addTiles() %>% 
@@ -520,6 +529,8 @@ server <- function(input, output) {
       addCircleMarkers(data = prop_center(), popup = ~popup, radius = 5, opacity = 1,fillOpacity = 1)
   })
   
+  # abandonedPropertiesbyDistrictPlot is the bar chart of the count of properties
+  # by district
   output$abandonedPropertiesByDistrictPlot <- renderPlot({
     ggplot(data = prop_center()@data,
            aes(x = Council_Di)) + geom_bar(stat="count") +
@@ -531,6 +542,7 @@ server <- function(input, output) {
       ylab("Count of Abandoned Properties")
   })
   
+  # Datatable of the abandonedProperties filtered by the selected status
   output$abandonedPropertiesTable <- DT::renderDataTable({
     DT::datatable(prop_center()@data[,c("Outcome","Code_Enforcement","Full_Address")],
                   options = list(pageLength = 10, scrollX = T))
@@ -545,10 +557,6 @@ server <- function(input, output) {
   output$schoolMap <- renderLeaflet({
     leaflet() %>%
       addTiles() %>%
-      # addPolygons(data = districts,
-      #             popup = paste("<b>District ", districts@data$Num, "</b><br>",
-      #                           "Council Member: ", districts@data$Council_Me),
-      #             color = ~district_pal(districts@data$Num)) %>%
       addPolygons(data = districts,
                   popup = paste("<b>District ", districts@data$Num, "</b><br>", 
                                 "Council Member: ", districts@data$Council_Me),
@@ -579,7 +587,6 @@ server <- function(input, output) {
       theme_classic() + 
       theme(text = element_text(size = 16)) +
       scale_y_continuous(breaks=pretty_breaks()) # need to add library(scales) for pretty_breaks
-    # scale_y_continuous(breaks=c(1:10))
   })
 #RUSS end
 }
