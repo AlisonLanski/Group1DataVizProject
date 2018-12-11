@@ -5,8 +5,8 @@ account: alanski
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 613048
-bundleId: 1754298
+bundleId: 1754315
 url: https://alanski.shinyapps.io/Group1EastFinalProjectApp/
-when: 1544489037.34469
+when: 1544489410.04149
 asMultiple: FALSE
 asStatic: FALSE
