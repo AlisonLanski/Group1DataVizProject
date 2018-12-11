@@ -265,7 +265,8 @@ ui <- navbarPage(title = "District Dashboard",
                            sidebarPanel(
                              radioButtons(inputId = "propertyStatus", 
                                           label = "Choose a property status",
-                                          choices = sort(unique(prop@data$Property_S)))
+                                          choices = sort(unique(prop@data$Property_S)),
+                                          selected = "In Compliance: Outcome Complete")
                            ),
                            
                            # Show a plot of the abandoned properties on the district map
