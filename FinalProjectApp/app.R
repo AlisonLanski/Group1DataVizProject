@@ -35,7 +35,7 @@ districts <- readOGR(dsn = "City_Council_Districts",
                      layer = "City_Council_Districts", 
                      stringsAsFactors = FALSE)
 
-load("Public_Facilities_SHP.RData")
+load("Public_Facilities_SHP.Rdata", envir=.GlobalEnv)
 
 #get the geo encoding from districts
 common_crs <- CRS(proj4string(districts))
@@ -76,7 +76,7 @@ facility_pal <- colorFactor(palette = c("tomato", "firebrick", "salmon",
 #KEN end
 
 #ALISON
-load("Parks_SHP.RData")
+load("Parks_SHP.Rdata", envir=.GlobalEnv)
 
 census <- readOGR(dsn = "2010_CensusData", 
                   layer = "2010_CensusData", 
