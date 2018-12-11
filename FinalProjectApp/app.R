@@ -31,39 +31,55 @@ options(scipen = 99) #turn of scientific notation
 
 #KEN
 
+# Load districts data
 districts <- readOGR(dsn = "City_Council_Districts", 
                      layer = "City_Council_Districts", 
                      stringsAsFactors = FALSE)
 
+# Load facilities data
 load("Public_Facilities_SHP.Rdata", envir=.GlobalEnv)
 
 #get the geo encoding from districts
 common_crs <- CRS(proj4string(districts))
 
-
 #apply coding to parks
 facilities <- spTransform(public_facilities_spatial, common_crs)
 
+# Determine which facilities are in which districts
 ov <- over(facilities, districts)
+# Store the district in the facilities@data data frame
 facilities@data$district <- ov$Num
+# Create a variable indicating whether the facility is in a district,
+# defaulting to "Yes"
 facilities@data$in_district <- "Yes"
 
+# Calculate the centroid of each district
 districts.center <- SpatialPointsDataFrame(gCentroid(districts, byid = TRUE), 
                                            districts@data, match.ID = FALSE)
 
+# Loop through the facilities
 for (i in 1:nrow(facilities@data)) {
+  # Check if the facility is not in a district
   if(is.na(facilities@data[i, ]$district)) {
+    # Calculate the distance from the facility to the centroid of each
+    # district
     distances <- distHaversine(facilities@coords[i, ], districts.center)
+    # Find the nearest centroid
     nearest <- which.min(distances)
+    # Set the district to the one with the nearest centroid
     facilities@data[i, ]$district <- nearest
+    # Indicate that the facility is not in a district
     facilities@data[i, ]$in_district <- "No"
   }
 }
 
+# Create a variable indicating the type of facility and whether it is in a
+# district
 facilities@data$marker <- paste(facilities@data$POPL_TYPE, 
                                 facilities@data$in_district, 
                                 sep = " - ")
 
+# Create color palette for markers for facilities
 facility_pal <- colorFactor(palette = c("tomato", "firebrick", "salmon", 
                                         "salmon3", "royalblue", "navy"), 
                             domain = c("FIRE STATION - No", 
