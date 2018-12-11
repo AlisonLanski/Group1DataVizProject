@@ -23,7 +23,7 @@ library(scales)    # Ken
 library(DT)        # Marisa & Alison
 library(scales) # Russ for pretty_breaks() in ggplot
 
-options(scipen = 99) #turn of scientific notation
+options(scipen = 99) #turn off scientific notation
 
 ##############################################
 # Data processing (geocoding done ahead of time and saved locally)
@@ -183,17 +183,27 @@ pal_districts_TF <- colorFactor(palette = c("magenta", "mediumblue"),
 #ALISON end
 
 #MARISA
+
+# Create a popup column to be used as the tooltip for each district polygon
 districts$popup = paste("<b>District ",districts$Num,"</b><br>",
                         "Council Member: ",districts$Council_Me,sep ="")
 
+# Read in the abandoned properties data
 prop = readOGR(dsn = "Abandoned_Property_Parcels", layer = "Abandoned_Property_Parcels")
-# Retain only records with non-NA Council_Di and non-NA Property_S (status)
+
+# Retain prop records with non-NA Council_Di and non-NA Property_S (status); 
+# we use the district and status on all components of the map, so all components
+# must have these two values
 prop@data = filter(prop@data, !is.na(prop@data$Council_Di) & !is.na(prop@data$Outcome_St))
 
+# Create a Full_Address column to be used in the property popup and datatable
 prop$Full_Address = paste(prop$Address_Nu,prop$Street_Nam,"South Bend, IN",prop$Zip_Code,sep = " ")
-prop$popup = paste("<b>","District ",prop$Council_Di,"</b><br>","Status: ",prop$Property_S,"<br>",
+
+# Create a popup column to be used as the tooltip for each property marker
+prop$popup = paste("<b>","Status: ",prop$Property_S,"</b><br>","<br>",
                    prop$Full_Address)
-# Rename the Outcome_St and Code_Enfor columns so they're not cut off
+
+# Rename the Outcome_St and Code_Enfor columns so they're not cut off in the datatable
 prop$Outcome = prop$Outcome_St
 prop$Code_Enforcement = prop$Code_Enfor
 
@@ -275,23 +285,29 @@ ui <- navbarPage(title = "District Dashboard",
                          )
                 ),
                 
-                #Marisa's Section
+                # Marisa's Section
                 tabPanel("Abandoned Properties",
                          sidebarLayout(
                            sidebarPanel(
+                             # Pre-select the In Compliance option since it has the most data points
                              radioButtons(inputId = "propertyStatus", 
                                           label = "Choose a property status",
                                           choices = sort(unique(prop@data$Property_S)),
                                           selected = "In Compliance: Outcome Complete")
                            ),
                            
-                           # Show a plot of the abandoned properties on the district map
-                           # Show a datatable of the abandoned properties matching the filtered status
                            mainPanel(
+                             # Create a tab panel on this tab so that tab components aren't stacked
+                             # and unnecessarily grouped together
                              tabsetPanel(
+                               # Map tab:
+                               # Show a plot of the abandoned properties on the district map
+                               # Show a plot of abandoned properties by district beneath the map
                                tabPanel("Map", 
                                         leafletOutput("abandonedPropertiesPlot"),
                                         plotOutput("abandonedPropertiesByDistrictPlot")),
+                               # Table tab:
+                               # Show a datatable of the abandoned properties matching the filtered status
                                tabPanel("Table", fluidRow(DT::dataTableOutput("abandonedPropertiesTable")))
                              )
                            )
