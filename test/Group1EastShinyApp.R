@@ -1,11 +1,15 @@
 #
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
+# Group 1 East
+# Data Visualization Final Project
+# Shiny App Code
+# 
+# Alison Lanski, Ken Nagle, Marisa Roman, Russ Thomas
 #
-# Find out more about building applications with Shiny here:
 #
-#    http://shiny.rstudio.com/
-#
+
+#############################
+#Load Packages
+#############################
 
 library(shiny)
 library(rgdal)
@@ -16,12 +20,14 @@ library(maptools)
 library(stringr)
 library(geosphere) # Ken
 library(scales)    # Ken
-library(DT)        # Marisa
+library(DT)        # Marisa & Alison
 library(scales) # Russ for pretty_breaks() in ggplot
 
-options(scipen = 99)
+options(scipen = 99) #turn of scientific notation
 
-# Data processing
+##############################################
+# Data processing (geocoding done ahead of time and saved locally)
+###############################################
 
 #KEN
 
@@ -67,7 +73,7 @@ facility_pal <- colorFactor(palette = c("tomato", "firebrick", "salmon",
                                        "POLICE STATION - No", 
                                        "POLICE STATION - Yes"))
 
-#KEN
+#KEN end
 
 #ALISON
 load("Parks_SHP.RData")
@@ -158,7 +164,7 @@ pal_districts_TF <- colorFactor(palette = c("magenta", "mediumblue"),
                                 domain = c("TRUE", "FALSE"))
 
 
-#ALISON
+#ALISON end
 
 #MARISA
 districts$popup = paste("<b>District ",districts$Num,"</b><br>",
@@ -175,16 +181,10 @@ prop$popup = paste("<b>","District ",prop$Council_Di,"</b><br>","Status: ",prop$
 prop$Outcome = prop$Outcome_St
 prop$Code_Enforcement = prop$Code_Enfor
 
-#MARISA
+#MARISA end
 
 #RUSS
-# Old Code
-# schools <-  readOGR(dsn="School_Boundaries",
-#                     "School_Boundaries",
-#                     stringsAsFactors = FALSE)
-# 
-# schools.center <- SpatialPointsDataFrame(gCentroid(schools, byid=TRUE), 
-#                                          schools@data, match.ID=FALSE)
+
 school_pal <- colorFactor(palette = c("firebrick", "salmon3"), 
                           domain = c("Public", "Private"))
 
@@ -204,11 +204,18 @@ ov_schools2 <- spCbind(schools.center, ov_schools)
 # add district column and info to Schools data
 schools.center@data$district <- ov_schools2$Num
 
-#RUSS
+#RUSS end
+
+
+#######################################################
+#####  Set up the page
+#######################################################
 
 # Define UI for application that draws a histogram
 ui <- navbarPage(title = "District Dashboard",
-                tabPanel("Public Facilities",
+
+                 #Ken's Section
+                 tabPanel("Public Facilities",
                          sidebarLayout(
                            sidebarPanel(
                              radioButtons(inputId = "facility_type", 
@@ -228,6 +235,7 @@ ui <- navbarPage(title = "District Dashboard",
                          )
                 ),
                 
+                #Alison's Section
                 tabPanel("Parks",
                          sidebarLayout(
                            sidebarPanel(
@@ -251,6 +259,7 @@ ui <- navbarPage(title = "District Dashboard",
                          )
                 ),
                 
+                #Marisa's Section
                 tabPanel("Abandoned Properties",
                          sidebarLayout(
                            sidebarPanel(
@@ -272,6 +281,7 @@ ui <- navbarPage(title = "District Dashboard",
                          )
                 ),
                 
+                #Russ' section
                 tabPanel("Schools",
                          sidebarLayout(
                            sidebarPanel(
@@ -293,9 +303,14 @@ ui <- navbarPage(title = "District Dashboard",
 
 )#end navbarPage
 
-# Define server logic required to draw a histogram
+###########################################################
+## Server function
+############################################################
+
 server <- function(input, output) {
-#KEN
+
+  ######
+  #KEN
   selected_facility <- reactive({
     facilities[facilities@data$POPL_TYPE == input$facility_type,]
   })
@@ -366,8 +381,8 @@ server <- function(input, output) {
     "Facilities outside the city are associated with the nearest district."
   })
 
-#KEN
-  
+#KEN end
+  ######################################
 #ALISON
   
   output$ParkMapTitle <- renderText({
@@ -448,8 +463,8 @@ server <- function(input, output) {
         target = 'row',
         backgroundColor = styleEqual(input$districtnum, '#ffe6ff'))
   })
-#ALISON
-  
+#ALISON end
+  ###########################################
 #MARISA
   selected_prop = reactive({
     prop[prop$Property_S %in% input$propertyStatus,]
@@ -487,8 +502,8 @@ server <- function(input, output) {
     DT::datatable(prop_center()@data[,c("Outcome","Code_Enforcement","Full_Address")],
                   options = list(pageLength = 10, scrollX = T))
   })
-#MARISA
-  
+#MARISA end
+  #############################################
 #RUSS
   selected_schooltype <- reactive({
     schools.center[schools.center@data$SchoolType == input$school_type,]
@@ -533,10 +548,11 @@ server <- function(input, output) {
       scale_y_continuous(breaks=pretty_breaks()) # need to add library(scales) for pretty_breaks
     # scale_y_continuous(breaks=c(1:10))
   })
-#RUSS
+#RUSS end
 }
 
-
+#####################################
 # Run the application 
+#####################################
 shinyApp(ui = ui, server = server)
 
