@@ -165,8 +165,11 @@ districts$popup = paste("<b>District ",districts$Num,"</b><br>",
                         "Council Member: ",districts$Council_Me,sep ="")
 
 prop = readOGR(dsn = "Abandoned_Property_Parcels", layer = "Abandoned_Property_Parcels")
+# Retain only records with non-NA Council_Di and non-NA Property_S (status)
+prop@data = filter(prop@data, !is.na(prop@data$Council_Di) & !is.na(prop@data$Outcome_St))
+
 prop$Full_Address = paste(prop$Address_Nu,prop$Street_Nam,"South Bend, IN",prop$Zip_Code,sep = " ")
-prop$popup = paste("<b>",prop$Property_S,"</b><br>",
+prop$popup = paste("<b>","District ",prop$Council_Di,"</b><br>","Status: ",prop$Property_S,"<br>",
                    prop$Full_Address)
 # Rename the Outcome_St and Code_Enfor columns so they're not cut off
 prop$Outcome = prop$Outcome_St
@@ -253,14 +256,18 @@ ui <- navbarPage(title = "District Dashboard",
                            sidebarPanel(
                              radioButtons(inputId = "propertyStatus", 
                                           label = "Choose a property status",
-                                          choices = sort(unique(filter(prop@data, !is.na(prop@data$Property_S))$Property_S)))
+                                          choices = sort(unique(prop@data$Property_S)))
                            ),
                            
                            # Show a plot of the abandoned properties on the district map
                            # Show a datatable of the abandoned properties matching the filtered status
                            mainPanel(
-                             leafletOutput("abandonedPropertiesPlot"),
-                             fluidRow(DT::dataTableOutput("abandonedPropertiesTable"))
+                             tabsetPanel(
+                               tabPanel("Map", 
+                                        leafletOutput("abandonedPropertiesPlot"),
+                                        plotOutput("abandonedPropertiesByDistrictPlot")),
+                               tabPanel("Table", fluidRow(DT::dataTableOutput("abandonedPropertiesTable")))
+                             )
                            )
                          )
                 ),
@@ -465,9 +472,20 @@ server <- function(input, output) {
       addCircleMarkers(data = prop_center(), popup = ~popup, radius = 5, opacity = 1,fillOpacity = 1)
   })
   
+  output$abandonedPropertiesByDistrictPlot <- renderPlot({
+    ggplot(data = prop_center()@data,
+           aes(x = Council_Di)) + geom_bar(stat="count") +
+      theme_minimal() + 
+      theme(text = element_text(size = 15),
+            legend.title = element_text(size = 15),
+            legend.text = element_text(size = 14)) +
+      xlab("District") +
+      ylab("Count of Abandoned Properties")
+  })
+  
   output$abandonedPropertiesTable <- DT::renderDataTable({
     DT::datatable(prop_center()@data[,c("Outcome","Code_Enforcement","Full_Address")],
-                  options = list(pageLength = 5, scrollX = T))
+                  options = list(pageLength = 10, scrollX = T))
   })
 #MARISA
   
